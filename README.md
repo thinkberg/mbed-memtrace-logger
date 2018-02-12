@@ -1,5 +1,5 @@
 # mbed-memtrace-logger
-Analyzes and los the memtrace output from mbed-os in a readable form. 
+Analyzes and logs the memtrace output from mbed-os in a readable form. 
 
 The memory trace outputs pretty unreadable information:
 
@@ -37,6 +37,8 @@ Even in color :-):
 - enable memory tracing in your mbed program
 - log uart into a log file continuously: `miniterm.py /dev/cu.usbmodem1234 9600 | tee memtrace.log`
 - run script to tail file `python memtrace.py memtrace.log KEYWORD`
+
+> the KEYWORD allows you to define a RESET state, where the analyzer resets all calculations.
 
 Enjoy!
 
