@@ -40,6 +40,10 @@ Even in color :-):
 
 > the KEYWORD allows you to define a RESET state, where the analyzer resets all calculations.
 
+# Required libraries:
+
+- `Pygtail`, install: `pip install pygtail`
+
 Enjoy!
 
 ## License
