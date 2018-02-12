@@ -24,7 +24,8 @@ information and also calculates the currently allocated heap:
 == 00000000 bytes -50     (#f:0x0;0x183f-0x20003080)
 ```
 
-Even in color :-)
+Even in color :-):
+
 ![logoutput.png](logoutput.png)
 
 # Using a log file
