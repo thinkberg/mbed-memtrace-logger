@@ -72,9 +72,12 @@ while True:
         m = r_malloc.search(line)
         if m:
             # print "m", m.group(1), ":", m.group(3)
-            mem[m.group(1)] = int(m.group(3))
-            allocated += int(m.group(3))
-            print "\033[1m== (%03d) \033[34m%08d\033[0m bytes \033[31m+%-6d\033[0m (%s)" % (len(mem), allocated, int(m.group(3)), line)
+            if m.group(1) == "0x0":
+                print "\033[1m!! (%03d) \033[31mmalloc failed\033[0m (%s)" % (len(mem), line)
+            else:
+                mem[m.group(1)] = int(m.group(3))
+                allocated += int(m.group(3))
+                print "\033[1m== (%03d) \033[34m%8d\033[0m bytes \033[31m+%-6d\033[0m (%s)" % (len(mem), allocated, int(m.group(3)), line)
             continue
 
         m = r_realloc.search(line)
@@ -85,10 +88,9 @@ while True:
                 diff = int(m.group(4)) - mem[m.group(1)]
                 mem[m.group(1)] = int(m.group(4))
             else:
-                print "!! WARN: realloc() without previous allocation!"
-                print "!! WARN: %s" % line
+                print "\033[33m!! WARN: realloc() without previous allocation\033[0m (%s)" % line
             allocated += diff
-            print "\033[1m== (%03d) \033[34m%08d\033[0m bytes \033[35m+%-6d\033[0m (%s)" % (len(mem), allocated, diff, line)
+            print "\033[1m== (%03d) \033[34m%8d\033[0m bytes \033[35m+%-6d\033[0m (%s)" % (len(mem), allocated, diff, line)
             continue
 
         m = r_free.search(line)
@@ -101,7 +103,7 @@ while True:
                 del mem[m.group(3)]
             else:
                 print "!! WARN: free(%s)" % m.group(3)
-            print "\033[1m== (%03d) \033[34m%08d\033[0m bytes \033[92m-%-6d\033[0m (%s)" % (len(mem), allocated, freed, line)
+            print "\033[1m== (%03d) \033[34m%8d\033[0m bytes \033[92m-%-6d\033[0m (%s)" % (len(mem), allocated, freed, line)
             continue
 
         # print all other lines as is, so we can still use the log functionality 
