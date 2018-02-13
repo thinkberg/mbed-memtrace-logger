@@ -106,7 +106,7 @@ while True:
                 allocated -= freed
                 del mem[m.group(4)]
             else:
-                print "!! WARN: free(%s)" % m.group(4)
+                print "\033[33m!! WARN: free(%s)\033[0m" % m.group(4)
             print "\033[1m== (%03d) \033[34m%8d\033[0m [%8x] \033[92m-%-6d\033[0m (%s)" % \
                   (len(mem), allocated, allocated, freed, line.replace(m.group(1), ""))
             continue
