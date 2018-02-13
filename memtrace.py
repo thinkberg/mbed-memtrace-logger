@@ -43,10 +43,9 @@ if len(sys.argv) > 1:
     reset = sys.argv[2]
     print "RESETTING tracer on '%s'" % reset
 
-
-r_malloc = re.compile("#m:(0x[0-9a-f]+);(0x[0-9a-f]+)-(\\d+)")
-r_realloc = re.compile("#r:(0x[0-9a-f]+);(0x[0-9a-f]+)-(0x[0-9a-f]+);(\\d+)")
-r_free = re.compile("#f:(0x[0-9a-f]+);(0x[0-9a-f]+)-(0x[0-9a-f]+)")
+r_malloc = re.compile("([^#]*)#m:(0x[0-9a-f]+);(0x[0-9a-f]+)-(\\d+)")
+r_realloc = re.compile("([^#]*)#r:(0x[0-9a-f]+);(0x[0-9a-f]+)-(0x[0-9a-f]+);(\\d+)")
+r_free = re.compile("([^#]*)#f:(0x[0-9a-f]+);(0x[0-9a-f]+)-(0x[0-9a-f]+)")
 
 partial = ""
 while True:
@@ -71,39 +70,45 @@ while True:
         # match malloc, realloc and free
         m = r_malloc.search(line)
         if m:
-            # print "m", m.group(1), ":", m.group(3)
-            if m.group(1) == "0x0":
+            if len(m.group(1)): print m.group(1)
+            # print "m", m.group(2), ":", m.group(4)
+            if m.group(2) == "0x0":
                 print "\033[1m!! (%03d) \033[31mmalloc failed\033[0m (%s)" % (len(mem), line)
             else:
-                mem[m.group(1)] = int(m.group(3))
-                allocated += int(m.group(3))
-                print "\033[1m== (%03d) \033[34m%8d\033[0m bytes \033[31m+%-6d\033[0m (%s)" % (len(mem), allocated, int(m.group(3)), line)
+                mem[m.group(2)] = int(m.group(4))
+                allocated += int(m.group(4))
+                print "\033[1m== (%03d) \033[34m%8d\033[0m [%8x] \033[31m+%-6d\033[0m (%s)" % \
+                      (len(mem), allocated, allocated, int(m.group(4)), line.replace(m.group(1), ""))
             continue
 
         m = r_realloc.search(line)
         if m:
-            # print "r", m.group(1), ":", m.group(4)
+            if len(m.group(1)): print m.group(1)
+            # print "r", m.group(2), ":", m.group(5)
             diff = 0
-            if mem.has_key(m.group(1)):
-                diff = int(m.group(4)) - mem[m.group(1)]
-                mem[m.group(1)] = int(m.group(4))
+            if mem.has_key(m.group(2)):
+                diff = int(m.group(5)) - mem[m.group(2)]
+                mem[m.group(2)] = int(m.group(5))
             else:
                 print "\033[33m!! WARN: realloc() without previous allocation\033[0m (%s)" % line
             allocated += diff
-            print "\033[1m== (%03d) \033[34m%8d\033[0m bytes \033[35m+%-6d\033[0m (%s)" % (len(mem), allocated, diff, line)
+            print "\033[1m== (%03d) \033[34m%8d\033[0m [%8x] \033[35m+%-6d\033[0m (%s)" % \
+                  (len(mem), allocated, allocated, diff, line.replace(m.group(1), ""))
             continue
 
         m = r_free.search(line)
         if m:
+            if len(m.group(1)): print m.group(1)
             # print "f", m.group(3)
             freed = 0
-            if mem.has_key(m.group(3)):
-                freed = mem[m.group(3)]
+            if mem.has_key(m.group(4)):
+                freed = mem[m.group(4)]
                 allocated -= freed
-                del mem[m.group(3)]
+                del mem[m.group(4)]
             else:
-                print "!! WARN: free(%s)" % m.group(3)
-            print "\033[1m== (%03d) \033[34m%8d\033[0m bytes \033[92m-%-6d\033[0m (%s)" % (len(mem), allocated, freed, line)
+                print "!! WARN: free(%s)" % m.group(4)
+            print "\033[1m== (%03d) \033[34m%8d\033[0m [%8x] \033[92m-%-6d\033[0m (%s)" % \
+                  (len(mem), allocated, allocated, freed, line.replace(m.group(1), ""))
             continue
 
         # print all other lines as is, so we can still use the log functionality 
