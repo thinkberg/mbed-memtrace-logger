@@ -16,12 +16,15 @@ The script takes those lines and converts them into a little more readable
 information and also calculates the currently allocated heap:
 
 ```
-== 00000050 bytes +50     (#m:0x20003080;0x182f-50)
-== 00000000 bytes -50     (#f:0x0;0x183f-0x20003080)
-== 00000050 bytes +50     (#m:0x20003080;0x182f-50)
-== 00000000 bytes -50     (#f:0x0;0x183f-0x20003080)
-== 00000050 bytes +50     (#m:0x20003080;0x182f-50)
-== 00000000 bytes -50     (#f:0x0;0x183f-0x20003080)
+$ python bin/memtrace.py test.log test
+RESETTING tracer on 'test'
+
+== (001)       50 [      32] +50     (#m:0x20003080;0x182f-50)
+== (000)        0 [       0] -50     (#f:0x0;0x183f-0x20003080)
+== (001)       50 [      32] +50     (#m:0x20003080;0x182f-50)
+== (000)        0 [       0] -50     (#f:0x0;0x183f-0x20003080)
+== (001)       50 [      32] +50     (#m:0x20003080;0x182f-50)
+== (000)        0 [       0] -50     (#f:0x0;0x183f-0x20003080)
 ```
 
 Even in color :-):
