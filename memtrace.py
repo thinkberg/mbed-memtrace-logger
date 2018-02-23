@@ -44,6 +44,7 @@ if len(sys.argv) > 1:
     print "RESETTING tracer on '%s'" % reset
 
 r_malloc = re.compile("([^#]*)#m:(0x[0-9a-f]+);(0x[0-9a-f]+)-(\\d+)")
+r_calloc = re.compile("([^#]*)#c:(0x[0-9a-f]+);(0x[0-9a-f]+)-(\\d+);(\\d+)")
 r_realloc = re.compile("([^#]*)#r:(0x[0-9a-f]+);(0x[0-9a-f]+)-(0x[0-9a-f]+);(\\d+)")
 r_free = re.compile("([^#]*)#f:(0x[0-9a-f]+);(0x[0-9a-f]+)-(0x[0-9a-f]+)")
 
@@ -79,6 +80,20 @@ while True:
                 allocated += int(m.group(4))
                 print "\033[1m== (%03d) \033[34m%8d\033[0m [%8x] \033[31m+%-6d\033[0m (%s)" % \
                       (len(mem), allocated, allocated, int(m.group(4)), line.replace(m.group(1), ""))
+            continue
+
+        m = r_calloc.search(line)
+        if m:
+            if len(m.group(1)): print m.group(1)
+            # print "c", m.group(2), ":", m.group(4), "*", m.group(5)
+            if m.group(2) == "0x0":
+                print "\033[1m!! (%03d) \033[31mcalloc failed\033[0m (%s)" % (len(mem), line)
+            else:
+                total = int(m.group(4)) * int(m.group(5))
+                mem[m.group(2)] = total
+                allocated += total
+                print "\033[1m== (%03d) \033[34m%8d\033[0m [%8x] \033[31m+%-6d\033[0m (%s)" % \
+                      (len(mem), allocated, allocated, total, line.replace(m.group(1), ""))
             continue
 
         m = r_realloc.search(line)
