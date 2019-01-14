@@ -1,53 +1,33 @@
 # mbed-memtrace-logger
+
 Analyzes and logs the memtrace output from mbed-os in a readable form. 
+This code is left over for the use with micro:bit and Calliope mini.
 
-The memory trace outputs pretty unreadable information:
+If you look for the original memtrace, check out the mbed-cli.
 
+> You need to enable heap debug output!
+
+Run with: `python3 memtrace.py /dev/cu.XXXXX 115200`
+
+The script auto-resets the counts and output looks like:
 ```
-#m:0x20003080;0x182f-50
-#f:0x0;0x183f-0x20003080
-#m:0x20003080;0x182f-50
-#f:0x0;0x183f-0x20003080
-#m:0x20003080;0x182f-50
-#f:0x0;0x183f-0x20003080
+HEAP 0: 
+heap_start : 0x20002950
+heap_end   : 0x20003600
+heap_size  : 3248
+[F:3248] 
+mb_total_free : 3248
+mb_total_used : 0
+== (001)       56 [20002954] +56     (malloc: ALLOCATED: 56 [0x20002954])
+== (002)       76 [20002990] +20     (malloc: ALLOCATED: 20 [0x20002990])
+== (003)      124 [200029a8] +48     (malloc: ALLOCATED: 48 [0x200029a8])
+...
+== (032)     1254 [20002e50] -18     (free:   0x20002e50)
+== (031)     1229 [20002ea8] -25     (free:   0x20002ea8)
+== (030)     1209 [20002e90] -20     (free:   0x20002e90)
+...
+Calliope Accelerometer Test v1.0
 ```
-
-The script takes those lines and converts them into a little more readable
-information and also calculates the currently allocated heap:
-
-```
-$ python bin/memtrace.py test.log test
-RESETTING tracer on 'test'
-
-== (001)       50 [      32] +50     (#m:0x20003080;0x182f-50)
-== (000)        0 [       0] -50     (#f:0x0;0x183f-0x20003080)
-== (001)       50 [      32] +50     (#m:0x20003080;0x182f-50)
-== (000)        0 [       0] -50     (#f:0x0;0x183f-0x20003080)
-== (001)       50 [      32] +50     (#m:0x20003080;0x182f-50)
-== (000)        0 [       0] -50     (#f:0x0;0x183f-0x20003080)
-```
-
-Even in color :-):
-
-![logoutput.png](logoutput.png)
-
-# Using a log file
-- enable memory tracing in your mbed program
-- log uart output into a file
-- run script to analyze memory state
-
-# Using a stream
-- enable memory tracing in your mbed program
-- log uart into a log file continuously: `miniterm.py /dev/cu.usbmodem1234 9600 | tee memtrace.log`
-- run script to tail file `python memtrace.py memtrace.log KEYWORD`
-
-> the KEYWORD allows you to define a RESET state, where the analyzer resets all calculations.
-
-# Required libraries:
-
-- `Pygtail`, install: `pip install pygtail`
-
-Enjoy!
 
 ## License
 
