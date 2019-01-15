@@ -22,16 +22,21 @@ from serial.tools.miniterm import Transform
 def debug(s):
     sys.stderr.write("D "+repr(s)+"\r\n")
 
+
 class CalliopeDebugTransform(Transform):
     mem = {}
+    max = 0
     allocated = 0
     reset = None
     buffer = ""
 
     def __init__(self):
         self.r_malloc = re.compile("(?:microbit_)?malloc:\s+(?:NATIVE\s+)?(?:ALLOCATED:)\s+(\d+)\s+\[(0x[0-9a-f]+)\]")
-        self.r_free = re.compile("^(?:microbit_)?free:\\s+(0x[0-9a-f]+)")
-        self.r_heap_size = re.compile("^mb_total_free : (\d+)")
+        self.r_free = re.compile("^(?:microbit_)?free:\\s+((0x)?[0-9a-f]+)")
+        self.r_heap_start = re.compile("^heap_start\s+:\s+(0x[0-9a-f]+)")
+        self.r_heap_end = re.compile("^heap_end\s+:\s+(0x[0-9a-f]+)")
+        self.r_heap_size = re.compile("^heap_size\s+:\s+(\d+)")
+        self.r_oom = re.compile("^malloc:\s+OUT OF MEMORY\s+\[(\d+)\]")
 
     def rx(self, rx_input):
         # collect lines
@@ -49,6 +54,12 @@ class CalliopeDebugTransform(Transform):
                 continue
         return out
 
+
+    def colorize(self, free):
+        if free > self.max/2: return "4"
+        elif free > self.max/3: return "5"
+        return "1"
+
     def trace_line(self, line):
         # strip newline and carriage return
         line = line.rstrip('\n').rstrip('\r')
@@ -59,8 +70,18 @@ class CalliopeDebugTransform(Transform):
             self.mem = {}
             self.allocated = 0
             line += "\r\n\r\n\033[91m>> RESET HEAP COUNTERS >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\033[0m\r\n"
-            line += "\033[4m   (NUM)    TOTAL [ ADDRESS] CHANGE  (COMMENT)\033[0m\r\n"
+            line += "\033[4m   (NUM)    FREE  [ ADDRESS] CHANGE  (COMMENT)\033[0m\r\n"
             return line
+
+        m = self.r_heap_start.search(line)
+        if m:
+            self.heap_start = int(m.group(1), 16)
+            return line + "\r\n"
+
+        m = self.r_heap_end.search(line)
+        if m:
+            self.heap_end = int(m.group(1), 16)
+            return line + "\r\n"
 
         # match malloc, realloc and free
         m = self.r_malloc.search(line)
@@ -69,24 +90,55 @@ class CalliopeDebugTransform(Transform):
             if m.group(2) == "0":
                 out += "\033[1m!! (%03d) \033[31mmalloc failed\033[0m (%s)\r\n" % (len(self.mem), line)
             else:
-                self.mem[m.group(2)] = int(m.group(1))
+                addr = int(m.group(2), 16)
+                self.mem[addr] = int(m.group(1))
                 self.allocated += int(m.group(1))
-                out += "\033[1m== (%03d) \033[34m%8d\033[0m [%8x] \033[31m+%-6d\033[0m (%s)\r\n" % \
-                       (len(self.mem), self.allocated, int(m.group(2), 16), int(m.group(1)), line)
+                free = self.max - self.allocated
+                out += "\033[1m== (%03d) \033[3%sm%8d\033[0m [%8x] \033[31m+%-6d\033[0m (%s)\r\n" % \
+                       (len(self.mem), self.colorize(free), free, addr, int(m.group(1)), line)
                 return out
 
         m = self.r_free.search(line)
         if m:
             out = ""
+            addr = 0
             freed = 0
             if m.group(1) in self.mem:
-                freed = self.mem[m.group(1)]
+                addr = int(m.group(1), 16)
+                freed = self.mem[addr]
                 self.allocated -= freed
-                del self.mem[m.group(1)]
+                del self.mem[addr]
             else:
-                out += "\033[33m!! (%03d) WARN: free(0x%s)\033[0m\r\n" % (len(self.mem), m.group(4))
-            out += "\033[1m== (%03d) \033[34m%8d\033[0m [%8x] \033[92m-%-6d\033[0m (%s)\r\n" % \
-                   (len(self.mem), self.allocated, int(m.group(1), 16), freed, line)
+                out += "\033[33m!! (%03d) WARN: free(0x%s)\033[0m\r\n" % (len(self.mem), m.group(1))
+
+            free = self.max - self.allocated
+            out += "\033[1m== (%03d) \033[3%sm%8d\033[0m [%8x] \033[92m-%-6d\033[0m (%s)\r\n" % \
+                   (len(self.mem), self.colorize(free), free, addr, freed, line)
+            return out
+
+        m = self.r_oom.search(line)
+        if m:
+            out = ""
+            wanted = int(m.group(1))
+            out += "\033[31m!! (%03d) : malloc(): no free block of size %d\033[0m\r\n" % (len(self.mem), wanted)
+
+            out += "HEAP ALLOCATION:\r\n"
+
+            mem = ""
+            end = 0
+            for addr in range(self.heap_start, self.heap_end):
+                if addr in self.mem:
+                    end = addr + self.mem[addr]
+                if addr == end:
+                    end = 0
+                if end:
+                    mem += "*"
+                else:
+                    mem += "."
+
+            for a in range(0, self.max, 64):
+                out += "%06d %08x %s\r\n" % (a, self.heap_start + a, mem[a:a+64])
+
             return out
 
         # print all other lines as is, so we can still use the log functionality
