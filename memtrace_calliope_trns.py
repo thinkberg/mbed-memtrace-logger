@@ -101,15 +101,14 @@ class CalliopeDebugTransform(Transform):
         m = self.r_free.search(line)
         if m:
             out = ""
-            addr = 0
             freed = 0
-            if m.group(1) in self.mem:
-                addr = int(m.group(1), 16)
+            addr = int(m.group(1), 16)
+            if addr in self.mem:
                 freed = self.mem[addr]
                 self.allocated -= freed
                 del self.mem[addr]
             else:
-                out += "\033[33m!! (%03d) WARN: free(0x%s)\033[0m\r\n" % (len(self.mem), m.group(1))
+                out += "\033[33m!! (%03d) WARN: free(0x%x)\033[0m\r\n" % (len(self.mem), addr)
 
             free = self.max - self.allocated
             out += "\033[1m== (%03d) \033[3%sm%8d\033[0m [%8x] \033[92m-%-6d\033[0m (%s)\r\n" % \
@@ -122,22 +121,32 @@ class CalliopeDebugTransform(Transform):
             wanted = int(m.group(1))
             out += "\033[31m!! (%03d) : malloc(): no free block of size %d\033[0m\r\n" % (len(self.mem), wanted)
 
-            out += "HEAP ALLOCATION:\r\n"
 
             mem = ""
             end = 0
             for addr in range(self.heap_start, self.heap_end):
-                if addr in self.mem:
-                    end = addr + self.mem[addr]
+                if addr+4 in self.mem:
+                    start = addr+4
+                    end = addr+4 + self.mem[addr+4]
                 if addr == end:
                     end = 0
                 if end:
-                    mem += "*"
+                    if addr < start: mem += "%"
+                    else: mem += "*"
                 else:
                     mem += "."
 
+            out += "HEAP ALLOCATION (% header | * data | . free)\r\n"
             for a in range(0, self.max, 64):
                 out += "%06d %08x %s\r\n" % (a, self.heap_start + a, mem[a:a+64])
+
+            addr = 0
+            out += "\033[31m== Free blocks: ==\033[0m\r\n"
+            blocks = re.findall("[%*]+|[.]+", mem)
+            for b in blocks:
+                if len(b) > 4 and b[0] == '.':
+                    out += "%08x %d bytes\r\n" % (self.heap_start + addr, len(b))
+                addr += len(b)
 
             return out
 
