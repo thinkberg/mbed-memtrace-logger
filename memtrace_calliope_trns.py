@@ -145,7 +145,7 @@ class CalliopeDebugTransform(Transform):
             blocks = re.findall("[%*]+|[.]+", mem)
             for b in blocks:
                 if len(b) > 4 and b[0] == '.':
-                    out += "%08x %d bytes\r\n" % (self.heap_start + addr, len(b))
+                    out += "%08x %d bytes\r\n" % (self.heap_start + addr, len(b)-4)
                 addr += len(b)
 
             return out
