@@ -32,11 +32,11 @@ class CalliopeDebugTransform(Transform):
 
     def __init__(self):
         self.r_malloc = re.compile("(?:microbit_)?malloc:\s+(?:NATIVE\s+)?(?:ALLOCATED:)\s+(\d+)\s+\[(0x[0-9a-f]+)\]")
-        self.r_free = re.compile("^(?:microbit_)?free:\\s+((0x)?[0-9a-f]+)")
-        self.r_heap_start = re.compile("^heap_start\s+:\s+(0x[0-9a-f]+)")
-        self.r_heap_end = re.compile("^heap_end\s+:\s+(0x[0-9a-f]+)")
-        self.r_heap_size = re.compile("^heap_size\s+:\s+(\d+)")
-        self.r_oom = re.compile("^malloc:\s+OUT OF MEMORY\s+\[(\d+)\]")
+        self.r_free = re.compile("(?:microbit_)?free:\\s+((0x)?[0-9a-f]+)")
+        self.r_heap_start = re.compile("heap_start\s+:\s+(0x[0-9a-f]+)")
+        self.r_heap_end = re.compile("heap_end\s+:\s+(0x[0-9a-f]+)")
+        self.r_heap_size = re.compile("heap_size\s+:\s+(\d+)")
+        self.r_oom = re.compile("malloc:\s+OUT OF MEMORY\s+\[(\d+)\]")
 
     def rx(self, rx_input):
         # collect lines
@@ -152,4 +152,4 @@ class CalliopeDebugTransform(Transform):
             return out
 
         # print all other lines as is, so we can still use the log functionality
-        return line
+        return line + '\n'
