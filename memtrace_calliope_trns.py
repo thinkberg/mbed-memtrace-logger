@@ -20,7 +20,7 @@ import sys
 from serial.tools.miniterm import Transform
 
 def debug(s):
-    sys.stderr.write("D "+repr(s)+"\r\n")
+    sys.stderr.write("D "+repr(s)+"\n")
 
 
 class CalliopeDebugTransform(Transform):
@@ -69,32 +69,32 @@ class CalliopeDebugTransform(Transform):
             self.max = int(m.group(1))
             self.mem = {}
             self.allocated = 0
-            line += "\r\n\r\n\033[91m>> RESET HEAP COUNTERS >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\033[0m\r\n"
-            line += "\033[4m   (NUM)    FREE  [ ADDRESS] CHANGE  (COMMENT)\033[0m\r\n"
+            line += "\n\n\033[91m>> RESET HEAP COUNTERS >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\033[0m\n"
+            line += "\033[4m   (NUM)    FREE  [ ADDRESS] CHANGE  (COMMENT)\033[0m\n"
             return line
 
         m = self.r_heap_start.search(line)
         if m:
             self.heap_start = int(m.group(1), 16)
-            return line + "\r\n"
+            return line + "\n"
 
         m = self.r_heap_end.search(line)
         if m:
             self.heap_end = int(m.group(1), 16)
-            return line + "\r\n"
+            return line + "\n"
 
         # match malloc, realloc and free
         m = self.r_malloc.search(line)
         if m:
             out = ""
             if m.group(2) == "0":
-                out += "\033[1m!! (%03d) \033[31mmalloc failed\033[0m (%s)\r\n" % (len(self.mem), line)
+                out += "\033[1m!! (%03d) \033[31mmalloc failed\033[0m (%s)\n" % (len(self.mem), line)
             else:
                 addr = int(m.group(2), 16)
                 self.mem[addr] = int(m.group(1))
                 self.allocated += int(m.group(1))
                 free = self.max - self.allocated
-                out += "\033[1m== (%03d) \033[3%sm%8d\033[0m [%8x] \033[31m+%-6d\033[0m (%s)\r\n" % \
+                out += "\033[1m== (%03d) \033[3%sm%8d\033[0m [%8x] \033[31m+%-6d\033[0m (%s)\n" % \
                        (len(self.mem), self.colorize(free), free, addr, int(m.group(1)), line)
                 return out
 
@@ -108,10 +108,10 @@ class CalliopeDebugTransform(Transform):
                 self.allocated -= freed
                 del self.mem[addr]
             else:
-                out += "\033[33m!! (%03d) WARN: free(0x%x)\033[0m\r\n" % (len(self.mem), addr)
+                out += "\033[33m!! (%03d) WARN: free(0x%x)\033[0m\n" % (len(self.mem), addr)
 
             free = self.max - self.allocated
-            out += "\033[1m== (%03d) \033[3%sm%8d\033[0m [%8x] \033[92m-%-6d\033[0m (%s)\r\n" % \
+            out += "\033[1m== (%03d) \033[3%sm%8d\033[0m [%8x] \033[92m-%-6d\033[0m (%s)\n" % \
                    (len(self.mem), self.colorize(free), free, addr, freed, line)
             return out
 
@@ -119,10 +119,11 @@ class CalliopeDebugTransform(Transform):
         if m:
             out = ""
             wanted = int(m.group(1))
-            out += "\033[31m!! (%03d) : malloc(): no free block of size %d\033[0m\r\n" % (len(self.mem), wanted)
+            out += "\033[31m!! (%03d) : malloc(): no free block of size %d\033[0m\n" % (len(self.mem), wanted)
 
 
             mem = ""
+            start = 0
             end = 0
             for addr in range(self.heap_start, self.heap_end):
                 if addr+4 in self.mem:
@@ -136,19 +137,19 @@ class CalliopeDebugTransform(Transform):
                 else:
                     mem += "."
 
-            out += "HEAP ALLOCATION (% header | * data | . free)\r\n"
+            out += "HEAP ALLOCATION (% header | * data | . free)\n"
             for a in range(0, self.max, 64):
-                out += "%06d %08x %s\r\n" % (a, self.heap_start + a, mem[a:a+64])
+                out += "%06d %08x %s\n" % (a, self.heap_start + a, mem[a:a+64])
 
             addr = 0
-            out += "\033[31m== Free blocks: ==\033[0m\r\n"
+            out += "\033[31m== Free blocks: ==\033[0m\n"
             blocks = re.findall("[%*]+|[.]+", mem)
             for b in blocks:
                 if len(b) > 4 and b[0] == '.':
-                    out += "%08x %d bytes\r\n" % (self.heap_start + addr + 4, len(b)-4)
+                    out += "%08x %d bytes\n" % (self.heap_start + addr + 4, len(b)-4)
                 addr += len(b)
 
             return out
 
         # print all other lines as is, so we can still use the log functionality
-        return line + "\r\n"
+        return line
