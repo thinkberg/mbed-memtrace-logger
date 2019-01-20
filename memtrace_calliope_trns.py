@@ -29,6 +29,8 @@ class CalliopeDebugTransform(Transform):
     allocated = 0
     reset = None
     buffer = ""
+    heap_start = 0
+    heap_end = 0
 
     def __init__(self):
         self.r_malloc = re.compile("(?:microbit_)?malloc:\s+(?:NATIVE\s+)?(?:ALLOCATED:)\s+(\d+)\s+\[(0x[0-9a-f]+)\]")
@@ -44,9 +46,9 @@ class CalliopeDebugTransform(Transform):
         for c in rx_input:
             if c == '\r' or c == '\n':
                 if len(self.buffer):
-                    out += self.trace_line(self.buffer)
+                    out += self.trace_line(self.buffer) + c
                 else:
-                    out += "\n"
+                    out += c
                 self.buffer = ""
                 continue
             else:
@@ -62,7 +64,7 @@ class CalliopeDebugTransform(Transform):
 
     def trace_line(self, line):
         # strip newline and carriage return
-        line = line.rstrip('\n').rstrip('\r')
+        # line = line.rstrip('\n').rstrip('\r')
 
         m = self.r_heap_size.search(line)
         if m:
@@ -94,7 +96,7 @@ class CalliopeDebugTransform(Transform):
                 self.mem[addr] = int(m.group(1))
                 self.allocated += int(m.group(1))
                 free = self.max - self.allocated
-                out += "\033[1m== (%03d) \033[3%sm%8d\033[0m [%8x] \033[31m+%-6d\033[0m (%s)\n" % \
+                out += "\033[1m== (%03d) \033[3%sm%8d\033[0m [%8x] \033[31m+%-6d\033[0m (%s)" % \
                        (len(self.mem), self.colorize(free), free, addr, int(m.group(1)), line)
                 return out
 
@@ -111,7 +113,7 @@ class CalliopeDebugTransform(Transform):
                 out += "\033[33m!! (%03d) WARN: free(0x%x)\033[0m\n" % (len(self.mem), addr)
 
             free = self.max - self.allocated
-            out += "\033[1m== (%03d) \033[3%sm%8d\033[0m [%8x] \033[92m-%-6d\033[0m (%s)\n" % \
+            out += "\033[1m== (%03d) \033[3%sm%8d\033[0m [%8x] \033[92m-%-6d\033[0m (%s)" % \
                    (len(self.mem), self.colorize(free), free, addr, freed, line)
             return out
 
@@ -152,4 +154,4 @@ class CalliopeDebugTransform(Transform):
             return out
 
         # print all other lines as is, so we can still use the log functionality
-        return line + '\n'
+        return line
